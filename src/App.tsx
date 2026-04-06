@@ -1,11 +1,23 @@
 import { useState } from "react";
+import { clsx } from "clsx";
 import { languages } from "./languages";
 
 export default function AssemblyEndgame() {
+  // State values
   const [currentWord, setCurrentWord] = useState("react");
   const [guessedLetters, setGuessedLetters] = useState<string[]>([]);
-  console.log(guessedLetters);
 
+  // Derived values
+  const wrongGuessCount = guessedLetters.filter(
+    (letter) => !currentWord.includes(letter),
+  ).length;
+  const isGameWon = currentWord
+    .split("")
+    .every((letter) => guessedLetters.includes(letter));
+  const isGameLost = wrongGuessCount >= languages.length - 1;
+  const isGameOver = isGameWon || isGameLost;
+
+  // Static values
   const alphabet = "abcdefghijklmnopqrstuvwxyz";
 
   function addGuessedLetter(letter: string) {
@@ -14,13 +26,15 @@ export default function AssemblyEndgame() {
     );
   }
 
-  const languageElements = languages.map((lang) => {
+  const languageElements = languages.map((lang, index) => {
+    const isLanguageLost = index < wrongGuessCount;
     const styles = {
       backgroundColor: lang.backgroundColor,
       color: lang.color,
     };
+    const className = clsx("chip", isLanguageLost && "lost");
     return (
-      <span className="chip" style={styles} key={lang.name}>
+      <span className={className} style={styles} key={lang.name}>
         {lang.name}
       </span>
     );
@@ -28,13 +42,36 @@ export default function AssemblyEndgame() {
 
   const letterElements = currentWord
     .split("")
-    .map((letter, index) => <span key={index}>{letter.toUpperCase()}</span>);
+    .map((letter, index) => (
+      <span key={index}>
+        {guessedLetters.includes(letter) ? letter.toUpperCase() : ""}
+      </span>
+    ));
 
-  const keyboardElements = alphabet.split("").map((letter) => (
-    <button key={letter} onClick={() => addGuessedLetter(letter)}>
-      {letter.toUpperCase()}
-    </button>
-  ));
+  const keyboardElements = alphabet.split("").map((letter) => {
+    const isGuessed = guessedLetters.includes(letter);
+    const isCorrect = isGuessed && currentWord.includes(letter);
+    const isWrong = isGuessed && !currentWord.includes(letter);
+    const className = clsx({
+      correct: isCorrect,
+      wrong: isWrong,
+    });
+
+    return (
+      <button
+        className={className}
+        key={letter}
+        onClick={() => addGuessedLetter(letter)}
+      >
+        {letter.toUpperCase()}
+      </button>
+    );
+  });
+
+  const gameStatusClass = clsx("game-status", {
+    won: isGameWon,
+    lost: isGameLost,
+  });
 
   return (
     <main>
@@ -45,14 +82,30 @@ export default function AssemblyEndgame() {
           from Assembly!
         </p>
       </header>
-      <section className="game-status">
-        <h2>You win!</h2>
-        <p>Well done! 🎉</p>
+
+      <section className={gameStatusClass}>
+        {isGameOver ? (
+          isGameWon ? (
+            <>
+              <h2>You win!</h2>
+              <p>Well done! 🎉</p>
+            </>
+          ) : (
+            <>
+              <h2>Game over!</h2>
+              <p>You lose! Better start learning Assembly 😭</p>
+            </>
+          )
+        ) : null}
       </section>
+
       <section className="language-chips">{languageElements}</section>
+
       <section className="word">{letterElements}</section>
+
       <section className="keyboard">{keyboardElements}</section>
-      <button className="new-game">New Game</button>
+
+      {isGameOver && <button className="new-game">New Game</button>}
     </main>
   );
 }
